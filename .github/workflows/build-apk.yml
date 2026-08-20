@@ -1,0 +1,100 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # Manual button trigger
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: 🔑 Decode keystore (optional - for signed release)
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "🔐 Found keystore secret, signing release APK..."
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/keystore.jks
+            echo "✅ Keystore decoded"
+          else
+            echo "ℹ️ No keystore secret found, building debug APK only"
+          fi
+
+      - name: 🏗️ Create keystore.properties (if signing)
+        run: |
+          if [ -f app/keystore.jks ]; then
+            cat > app/keystore.properties << EOF
+storeFile=keystore.jks
+storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+keyAlias=${{ secrets.KEY_ALIAS }}
+keyPassword=${{ secrets.KEY_PASSWORD }}
+EOF
+          fi
+
+      - name: 🔧 Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
+      - name: 📦 Build Debug APK
+        run: |
+          cd app
+          chmod +x gradlew 2>/dev/null || true
+          ./gradlew assembleDebug --no-daemon --stacktrace
+        env:
+          ANDROID_HOME: /opt/android-sdk
+
+      - name: 📤 Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: 📦 Build Release APK (if keystore configured)
+        if: hashFiles('app/keystore.jks') != ''
+        run: ./gradlew assembleRelease --no-daemon
+        env:
+          ANDROID_HOME: /opt/android-sdk
+
+      - name: 📤 Upload Release APK
+        if: hashFiles('app/build/outputs/apk/release/app-release.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 90
+
+      - name: ✅ Build Summary
+        if: success()
+        run: |
+          echo "## 🎉 Build Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**APK Files:**" >> $GITHUB_STEP_SUMMARY
+          if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+            echo "- ✅ Debug APK: \`app/build/outputs/apk/debug/app-debug.apk\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            echo "- ✅ Release APK: \`app/build/outputs/apk/release/app-release.apk\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP SUMMARY
+          echo "📥 Download from the **Actions** tab → run details → **Artifacts** section" >> $GITHUB_STEP_SUMMARY
+
+      - name: ❌ Build Failed
+        if: failure()
+        run: |
+          echo "## ❌ Build Failed" >> $GITHUB_STEP_SUMMARY
+          echo "Check logs above for errors." >> $GITHUB_STEP_SUMMARY
