@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Gemini API Key"
+        android:textColor="#374151"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp"/>
+
+    <EditText
+        android:id="@+id/keyInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="AIzaSy..."
+        android:inputType="text"
+        android:fontFamily="monospace"
+        android:padding="12dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Label (optional)"
+        android:textColor="#374151"
+        android:textStyle="bold"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="4dp"/>
+
+    <EditText
+        android:id="@+id/labelInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="e.g. Personal Account"
+        android:inputType="text"
+        android:padding="12dp"/>
+</LinearLayout>
